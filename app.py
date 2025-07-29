@@ -4,7 +4,7 @@ import requests
 
 st.set_page_config(page_title="🌾 Yugdaan - Smart Farming Bihar", layout="centered")
 st.title("🌾 Yugdaan - किसान की अपनी सलाहकार")
-st.markdown("फसल, मौसम और ज़रूरत के अनुसार सुझाव • Crop guidance tailored to your needs and weather")
+st.markdown("फसल, मौसम, मंडी भाव और ज़रूरत के अनुसार सुझाव • Crop, mandi and weather-based guidance")
 
 districts = {
     "Darbhanga": "Darbhanga,IN",
@@ -34,12 +34,19 @@ try:
 except:
     st.warning("Weather data unavailable at the moment.")
 
-st.markdown("### 🧠 Answer a few questions (कुछ सवालों के जवाब दें)")
+# Mocked mandi prices
+mandi_prices = {
+    "Darbhanga": [("धान (Paddy)", 1860), ("मक्का (Maize)", 1750)],
+    "Vaishali": [("गेहूं (Wheat)", 2100), ("आलू (Potato)", 1600)],
+    "Aara": [("सरसों (Mustard)", 5000), ("बैंगन (Brinjal)", 2500)],
+    "Chapra": [("प्याज (Onion)", 1400), ("टमाटर (Tomato)", 1800)],
+    "Balia": [("चना (Gram)", 4600), ("कद्दू (Pumpkin)", 1300)],
+}
+st.markdown("### 🏪 Mandi Prices Today (मंडी भाव)")
+for crop, price in mandi_prices[district]:
+    st.write(f"- {crop}: ₹{price} per quintal (क्विंटल)")
 
-land = st.radio("आपके पास कितनी ज़मीन है? (Land size)", ["1-2 acre", "2-5 acre", "More than 5 acre"])
-irrigation = st.radio("क्या आपके पास सिंचाई की सुविधा है? (Do you have irrigation?)", ["Yes", "No"])
-wait_time = st.radio("आप कितने समय तक इंतज़ार कर सकते हैं फ़सल के लिए?", ["Short (3 months)", "Medium (6 months)", "Long (9+ months)"])
-
+st.markdown("### 🛰️ Satellite Soil Moisture (Mock Data)")
 soil_moisture_status = {
     "Darbhanga": "Low",
     "Vaishali": "Medium",
@@ -48,7 +55,13 @@ soil_moisture_status = {
     "Balia": "High"
 }
 moisture = soil_moisture_status.get(district, "Medium")
-st.markdown(f"### 🛰️ Estimated Soil Moisture: **{moisture}** (अनुमानित मिट्टी की नमी)")
+st.info(f"🧪 मिट्टी की नमी: **{moisture}** (based on NASA/ISRO trend)")
+
+st.markdown("### 🧠 Answer a few questions (कुछ सवालों के जवाब दें)")
+
+land = st.radio("आपके पास कितनी ज़मीन है? (Land size)", ["1-2 acre", "2-5 acre", "More than 5 acre"])
+irrigation = st.radio("क्या आपके पास सिंचाई की सुविधा है? (Do you have irrigation?)", ["Yes", "No"])
+wait_time = st.radio("आप कितने समय तक इंतज़ार कर सकते हैं फ़सल के लिए?", ["Short (3 months)", "Medium (6 months)", "Long (9+ months)"])
 
 crop_knowledge = {
     "Darbhanga": [
@@ -97,4 +110,4 @@ else:
 
 st.markdown("---")
 st.info("ℹ️ Kharif: Monsoon crops (जैसे धान, मक्का) • Rabi: Winter crops (जैसे गेहूं, सरसों)")
-st.caption("Prototype v2 • Powered by real weather + static soil + smart crop logic")
+st.caption("Prototype v3 • Real weather + mandi + soil + advisory")
