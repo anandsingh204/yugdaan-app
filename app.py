@@ -108,4 +108,4 @@ else:
 
 # --- Soil Moisture Suggestion ---
 if soil_moisture == "Low":
-    st.warning("💧 मिट्टी में नमी कम है, सुबह सिंचाई करें (Low soil moist
+st.warning("💧 मिट्टी में नमी कम है, सुबह सिंचाई करें (Low soil moisture – irrigate in the morning).")
