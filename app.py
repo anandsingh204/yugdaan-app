@@ -107,5 +107,11 @@ else:
     st.warning("⚠️ कोई उपयुक्त फ़सल नहीं मिली। कृपया अलग प्राथमिकता चुनें। (No ideal crop found for this goal.)")
 
 # --- Soil Moisture Suggestion ---
+# --- Soil Moisture Suggestion ---
 if soil_moisture == "Low":
-st.warning("💧 मिट्टी में नमी कम है, सुबह सिंचाई करें (Low soil moisture – irrigate in the morning).")
+    st.warning("💧 मिट्टी में नमी कम है, सुबह सिंचाई करें (Low soil moisture – irrigate in the morning).")
+elif soil_moisture == "High":
+    st.success("🌦 मिट्टी में अच्छी नमी है, अभी सिंचाई की आवश्यकता नहीं।")
+
+st.markdown("---")
+st.caption("📊 Prototype powered by live weather & smart filters. Real-time satellite & mandi data coming soon.")
