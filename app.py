@@ -1,12 +1,11 @@
+
 import streamlit as st
 import requests
-import random
 
-st.set_page_config(page_title="Yugdaan - खेती सलाह", layout="centered")
-st.title("🌾 Yugdaan - Bihar Smart Farming Assistant")
-st.markdown("आपके जिले और ज़रूरत के अनुसार फ़सल की सिफ़ारिश (Crop recommendation based on your district and needs)")
+st.set_page_config(page_title="🌾 Yugdaan - Smart Farming Bihar", layout="centered")
+st.title("🌾 Yugdaan - किसान की अपनी सलाहकार")
+st.markdown("फसल, मौसम और ज़रूरत के अनुसार सुझाव • Crop guidance tailored to your needs and weather")
 
-# --- District Selection ---
 districts = {
     "Darbhanga": "Darbhanga,IN",
     "Vaishali": "Hajipur,IN",
@@ -14,104 +13,88 @@ districts = {
     "Chapra": "Chhapra,IN",
     "Balia": "Ballia,IN"
 }
-
 district = st.selectbox("📍 Select your district (जिला चुनें)", list(districts.keys()))
 city_name = districts[district]
 
-# --- Real-Time Weather API ---
 api_key = "cce8745e8f0664cd77af8b135789fe54"
 url = f"http://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={api_key}&units=metric"
 
 try:
     response = requests.get(url)
     weather_data = response.json()
-
     if weather_data["cod"] == 200:
         temp = weather_data["main"]["temp"]
         humidity = weather_data["main"]["humidity"]
         weather = weather_data["weather"][0]["description"]
         rain = "rain" in weather.lower()
-
-        st.markdown(f"🌤 **Today's Weather (आज का मौसम):**")
-        st.markdown(f"- Temperature (तापमान): {temp}°C")
-        st.markdown(f"- Humidity (नमी): {humidity}%")
-        st.markdown(f"- Condition: {weather.capitalize()} ({'बारिश' if rain else 'कोई बारिश नहीं'})")
-    else:
-        st.error("⚠️ Weather data not available for your district right now.")
+        st.markdown("### 🌦️ Weather Today (आज का मौसम)")
+        st.write(f"- Temperature (तापमान): {temp}°C")
+        st.write(f"- Humidity (नमी): {humidity}%")
+        st.write(f"- Condition: {weather.capitalize()} ({'बारिश हो सकती है' if rain else 'बारिश नहीं होगी'})")
 except:
-    st.error("❌ Could not fetch live weather. Please check internet connection.")
+    st.warning("Weather data unavailable at the moment.")
 
-# --- User Goal ---
-goal = st.selectbox("🎯 What do you want from your crop? (आपकी प्राथमिकता)", [
-    "High Profit (ज्यादा कमाई)",
-    "Less Water Need (कम पानी वाली फ़सल)",
-    "Quick Harvest (तेज़ी से तैयार होने वाली फ़सल)"
-])
+st.markdown("### 🧠 Answer a few questions (कुछ सवालों के जवाब दें)")
 
-# --- Soil Moisture (Mock) ---
-soil_moisture = random.choice(["Low", "Medium", "High"])
-st.info(f"💧 Current Soil Moisture (मिट्टी में नमी): **{soil_moisture}**")
+land = st.radio("आपके पास कितनी ज़मीन है? (Land size)", ["1-2 acre", "2-5 acre", "More than 5 acre"])
+irrigation = st.radio("क्या आपके पास सिंचाई की सुविधा है? (Do you have irrigation?)", ["Yes", "No"])
+wait_time = st.radio("आप कितने समय तक इंतज़ार कर सकते हैं फ़सल के लिए?", ["Short (3 months)", "Medium (6 months)", "Long (9+ months)"])
 
-# --- Smart Crop Recommendation Logic ---
-crop_db = {
+soil_moisture_status = {
+    "Darbhanga": "Low",
+    "Vaishali": "Medium",
+    "Aara": "Low",
+    "Chapra": "Medium",
+    "Balia": "High"
+}
+moisture = soil_moisture_status.get(district, "Medium")
+st.markdown(f"### 🛰️ Estimated Soil Moisture: **{moisture}** (अनुमानित मिट्टी की नमी)")
+
+crop_knowledge = {
     "Darbhanga": [
-        {"name": "Paddy (धान)", "profit": "high", "water": "high", "speed": "medium"},
-        {"name": "Maize (मक्का)", "profit": "medium", "water": "medium", "speed": "fast"},
-        {"name": "Banana (केला)", "profit": "high", "water": "high", "speed": "slow"},
-        {"name": "Marigold (गेंदा)", "profit": "medium", "water": "low", "speed": "fast"}
+        {"name": "Paddy (धान) – Kharif", "water": "high", "wait": "Medium", "profit": "high"},
+        {"name": "Banana (केला)", "water": "high", "wait": "Long", "profit": "high"},
+        {"name": "Marigold (गेंदा)", "water": "low", "wait": "Short", "profit": "medium"},
+        {"name": "Maize (मक्का) – Kharif", "water": "medium", "wait": "Medium", "profit": "medium"},
     ],
     "Vaishali": [
-        {"name": "Wheat (गेहूं)", "profit": "medium", "water": "medium", "speed": "medium"},
-        {"name": "Potato (आलू)", "profit": "high", "water": "medium", "speed": "fast"},
-        {"name": "Litchi (लीची)", "profit": "high", "water": "high", "speed": "slow"},
-        {"name": "Mustard (सरसों)", "profit": "medium", "water": "low", "speed": "fast"}
+        {"name": "Litchi (लीची)", "water": "high", "wait": "Long", "profit": "high"},
+        {"name": "Mustard (सरसों) – Rabi", "water": "low", "wait": "Short", "profit": "medium"},
+        {"name": "Potato (आलू) – Rabi", "water": "medium", "wait": "Short", "profit": "high"},
+        {"name": "Wheat (गेहूं) – Rabi", "water": "medium", "wait": "Medium", "profit": "medium"},
     ],
     "Aara": [
-        {"name": "Sugarcane (गन्ना)", "profit": "high", "water": "high", "speed": "slow"},
-        {"name": "Brinjal (बैंगन)", "profit": "medium", "water": "medium", "speed": "fast"},
-        {"name": "Cauliflower (फूलगोभी)", "profit": "medium", "water": "low", "speed": "fast"}
+        {"name": "Sugarcane (गन्ना)", "water": "high", "wait": "Long", "profit": "high"},
+        {"name": "Cauliflower (फूलगोभी)", "water": "low", "wait": "Short", "profit": "medium"},
+        {"name": "Brinjal (बैंगन)", "water": "medium", "wait": "Medium", "profit": "medium"},
     ],
     "Chapra": [
-        {"name": "Paddy (धान)", "profit": "high", "water": "high", "speed": "medium"},
-        {"name": "Tomato (टमाटर)", "profit": "medium", "water": "medium", "speed": "fast"},
-        {"name": "Garlic (लहसुन)", "profit": "medium", "water": "low", "speed": "medium"}
+        {"name": "Garlic (लहसुन)", "water": "low", "wait": "Medium", "profit": "medium"},
+        {"name": "Tomato (टमाटर)", "water": "medium", "wait": "Short", "profit": "high"},
     ],
     "Balia": [
-        {"name": "Wheat (गेहूं)", "profit": "medium", "water": "medium", "speed": "medium"},
-        {"name": "Onion (प्याज)", "profit": "high", "water": "medium", "speed": "fast"},
-        {"name": "Pumpkin (कद्दू)", "profit": "medium", "water": "low", "speed": "fast"}
+        {"name": "Onion (प्याज)", "water": "medium", "wait": "Short", "profit": "high"},
+        {"name": "Pumpkin (कद्दू)", "water": "low", "wait": "Short", "profit": "medium"},
     ]
 }
 
-# --- Apply filter based on user goal ---
-filter_key = {
-    "High Profit (ज्यादा कमाई)": "profit",
-    "Less Water Need (कम पानी वाली फ़सल)": "water",
-    "Quick Harvest (तेज़ी से तैयार होने वाली फ़सल)": "speed"
-}[goal]
+st.markdown("### ✅ Recommended Crops (अनुशंसित फ़सलें)")
+filtered = []
+for crop in crop_knowledge.get(district, []):
+    if (irrigation == "No" and crop["water"] == "high"):
+        continue
+    if wait_time.startswith("Short") and crop["wait"] != "Short":
+        continue
+    if wait_time.startswith("Medium") and crop["wait"] == "Long":
+        continue
+    filtered.append(crop["name"])
 
-desired_value = {
-    "profit": "high",
-    "water": "low",
-    "speed": "fast"
-}[filter_key]
-
-matching_crops = [crop["name"] for crop in crop_db[district] if crop[filter_key] == desired_value]
-
-# --- Output Recommendations ---
-st.subheader("🌱 Recommended Crops (अनुशंसित फ़सलें):")
-if matching_crops:
-    for crop in matching_crops[:3]:
-        st.markdown(f"- ✅ {crop}")
+if filtered:
+    for crop in filtered:
+        st.markdown(f"- 🌱 {crop}")
 else:
-    st.warning("⚠️ कोई उपयुक्त फ़सल नहीं मिली। कृपया अलग प्राथमिकता चुनें। (No ideal crop found for this goal.)")
-
-# --- Soil Moisture Suggestion ---
-# --- Soil Moisture Suggestion ---
-if soil_moisture == "Low":
-    st.warning("💧 मिट्टी में नमी कम है, सुबह सिंचाई करें (Low soil moisture – irrigate in the morning).")
-elif soil_moisture == "High":
-    st.success("🌦 मिट्टी में अच्छी नमी है, अभी सिंचाई की आवश्यकता नहीं।")
+    st.warning("कोई उपयुक्त फ़सल नहीं मिली (No suitable crop found for your selection).")
 
 st.markdown("---")
-st.caption("📊 Prototype powered by live weather & smart filters. Real-time satellite & mandi data coming soon.")
+st.info("ℹ️ Kharif: Monsoon crops (जैसे धान, मक्का) • Rabi: Winter crops (जैसे गेहूं, सरसों)")
+st.caption("Prototype v2 • Powered by real weather + static soil + smart crop logic")
