@@ -1,53 +1,35 @@
-
 import streamlit as st
-import json
-from datetime import date
+from geopy.geocoders import Nominatim
 
-st.set_page_config(page_title="🌾 Yugdaan v9 - Full Bihar Map", layout="centered")
-st.title("🌾 Yugdaan v9 – पिनकोड आधारित फ़सल सलाह (बिहार के लिए)")
+# Google Maps API Key
+API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
 
-# ✅ Load district map from JSON
-with open("bihar_pincode_district_map.json", "r", encoding="utf-8") as f:
-    district_map = json.load(f)
+st.set_page_config(page_title="Yugdaan – Personalized Farming Assistant", layout="centered")
+st.title("🌾 Yugdaan – Personalized Farming Assistant for Bihar")
 
-st.markdown("### 📍 पिनकोड दर्ज करें:")
-pincode = st.text_input("उदाहरण: 841301", max_chars=6)
+# Input pincode
+pincode = st.text_input("📮 Enter your pincode (पिनकोड दर्ज करें):")
 
-district = district_map.get(pincode)
-if district:
-    st.success(f"🔍 यह पिनकोड `{pincode}` → `{district}` ज़िले से संबंधित है।")
-elif pincode:
-    st.warning("⚠️ यह पिनकोड हमारे सिस्टम में नहीं मिला। कृपया पुनः जांचें।")
+# Function to fetch satellite image URL
+def get_satellite_image_url(pincode):
+    geolocator = Nominatim(user_agent="yugdaan-live-app")
+    location = geolocator.geocode({"postalcode": pincode, "country": "India"})
+    if location:
+        lat, lon = location.latitude, location.longitude
+        return (
+            f"https://maps.googleapis.com/maps/api/staticmap?"
+            f"center={lat},{lon}&zoom=14&size=600x400&maptype=satellite"
+            f"&markers=color:red%7Clabel:P%7C{lat},{lon}"
+            f"&key={API_KEY}"
+        )
+    return None
 
-st.markdown("### 🌾 ज़मीन का आकार:")
-land = st.radio("आपके पास कितनी ज़मीन है?", ["<1 एकड़", "1-2 एकड़", "2-5 एकड़", "5+ एकड़"])
-
-st.markdown("### 🌊 ज़मीन की हालत:")
-soil_type = st.selectbox("ज़मीन की स्थिति:", ["सामान्य (Normal)", "दलदली (Waterlogged)", "बंजर (Barren)", "रेतीली (Sandy)"])
-
-st.markdown("### 💸 खेती का बजट:")
-budget = st.selectbox("बजट:", ["₹0–₹20,000", "₹20,000–₹50,000", "₹50,000+"])
-
-# Sample crop recommendations
-district_crop_demo = {
-    "Chapra": [("आलू", "₹18K", "₹1.2L", "✅ Stable"), ("धान", "₹20K", "₹1.4L", "⛅ Mid Risk")],
-    "Darbhanga": [("मखाना", "₹25K", "₹1.5L", "✅ Local"), ("धान", "₹20K", "₹1.2L", "⛅ Mid Risk")],
-    "Muzaffarpur": [("लीची", "₹28K", "₹2L", "✅ Export"), ("सरसों", "₹15K", "₹70K", "✅ Winter")]
-}
-default_crops = [("गेहूं", "₹22K", "₹1.3L", "✅ Reliable"), ("चना", "₹18K", "₹1L", "✅ Low Cost")]
-
-if st.button("📊 सलाह लें"):
-    if district:
-        st.markdown("### 🧠 AI सुझाई गई फ़सलें:")
-        crops = district_crop_demo.get(district, default_crops)
-        st.markdown("| फ़सल | लागत | आमदनी | जोखिम |")
-        st.markdown("|------|--------|---------|--------|")
-        for crop in crops:
-            st.markdown(f"| {crop[0]} | {crop[1]} | {crop[2]} | {crop[3]} |")
+# Show satellite image if valid pincode is entered
+if pincode:
+    satellite_url = get_satellite_image_url(pincode)
+    if satellite_url:
+        st.image(satellite_url, caption="📍 आपके खेत का सैटेलाइट दृश्य")
     else:
-        st.error("❌ बिहार का यह पिनकोड नहीं मिला। कृपया मान्य पिनकोड डालें।")
-
-    st.markdown("### 📅 आज से क्या करें?")
-    st.info("👉 आज बीज और खाद की जानकारी लें, कल जुताई करवाएं। हर फ़सल के लिए अलग गाइड जल्द जोड़ी जाएगी।")
-
-    st.caption("⚙️ यह सुझाव पिनकोड, ज़मीन और बजट पर आधारित है – Yugdaan AI द्वारा।")
+        st.warning("⚠️ यह पिनकोड हमारे सिस्टम में नहीं मिला। कृपया जांचें।")
+else:
+    st.info("🔍 लाइव सैटेलाइट व्यू देखने के लिए ऊपर पिनकोड दर्ज करें।")
