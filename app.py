@@ -1,32 +1,14 @@
 import streamlit as st
-import json
 import requests
 from datetime import datetime
 import pytz
-import difflib
 import openai
-
-# ----------------- Load Static Data --------------------
-with open("crop_recommendations.json", "r", encoding="utf-8") as f:
-    crop_data = json.load(f)
 
 # ----------------- Config --------------------
 API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
 WEATHER_API_KEY = "cce8745e8f0664cd77af8b135789fe54"
 OPENAI_API_KEY = "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"
 openai.api_key = OPENAI_API_KEY
-
-roman_to_hindi = {
-    "mooli": "मूली",
-    "dhaniya": "धनिया",
-    "baigan": "बैगन",
-    "aloo": "आलू",
-    "pyaz": "प्याज",
-    "gobhi": "गोभी",
-    "genda": "गेंदा",
-    "tomato": "टमाटर",
-    "tamatar": "टमाटर"
-}
 
 # ----------------- Helper Functions --------------------
 def get_location_details_from_google(pincode):
@@ -64,28 +46,30 @@ def get_weather_alert(pincode):
     except:
         return "⚠️ मौसम जानकारी उपलब्ध नहीं है।"
 
-def get_crop_advice(query, crops):
-    query = query.lower().replace("?", "").replace("kyon", "").replace("kyun", "").strip()
-    if query in roman_to_hindi:
-        query = roman_to_hindi[query]
-
-    all_crop_names = [crop["name"] for cat in crops.values() for crop in cat]
-    closest_match = difflib.get_close_matches(query, all_crop_names, n=1, cutoff=0.6)
-    if closest_match:
-        for cat in crops.values():
-            for crop in cat:
-                if crop["name"] == closest_match[0]:
-                    return f"🌱 **{crop['name']}** इसलिए सुझाया गया है:", f"🔎 कारण: {crop['why']}\n\n💰 लागत: ₹{crop['cost_per_acre']} प्रति एकड़\n📈 अनुमानित मुनाफ़ा: {crop['expected_profit']} प्रति एकड़"
-
-    # If not matched, ask GPT
-    gpt_prompt = f"Why should a farmer in Bihar grow '{query}'? Explain in simple Hindi with cost and profit approximation if known."
+def get_crop_recommendation(pincode, land_size, budget):
+    prompt = f"""
+    I am a farmer from Bihar. My pincode is {pincode}. I want to do farming on land size: {land_size} and my budget is {budget}.
+    Please suggest the 2–3 best crops I should grow now based on season, soil, weather and income trends. 
+    Also explain:
+    1. Why these crops are suitable
+    2. Estimated cost and expected profit per acre
+    3. What I will need for best yield (like fertilizers, pesticides etc.)
+    4. Best month to start cultivation
+    Answer in simple Hinglish (mix of Hindi-English) that a rural farmer can understand.
+    """
     response = openai.ChatCompletion.create(
         model="gpt-4",
-        messages=[
-            {"role": "user", "content": gpt_prompt}
-        ]
+        messages=[{"role": "user", "content": prompt}]
     )
-    return f"🌾 {query} के बारे में जानकारी:", response["choices"][0]["message"]["content"]
+    return response["choices"][0]["message"]["content"]
+
+def ask_crop_question(user_query):
+    prompt = f"एक किसान ने पूछा है: '{user_query}'. कृपया इस सवाल का जवाब सरल हिंदी में दें ताकि वह समझ सके। फसल की उपयोगिता, लागत, मुनाफा और मौसम की जानकारी जोड़ें।"
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response["choices"][0]["message"]["content"]
 
 # ----------------- App Config --------------------
 st.set_page_config(page_title="Yugdaan", layout="centered")
@@ -112,21 +96,14 @@ if pincode:
         st.markdown("### 🌤️ मौसम सलाह (Weather Advice)")
         st.info(get_weather_alert(pincode))
 
-        # Crop Recommendation
-        st.markdown("## 🌱 आपके लिए फसल सुझाव")
-        for category, crops in crop_data.items():
-            st.markdown(f"### 🔹 {category.replace('_', ' ').title()} Crops")
-            for crop in crops:
-                st.success(f"**{crop['name']}** ({crop['type']})")
-                st.markdown(f"💰 **लागत (Cost/acre)**: ₹{crop['cost_per_acre']}  \n"
-                            f"📈 **मुनाफ़ा (Profit/acre)**: {crop['expected_profit']}  \n"
-                            f"📝 **क्यों उगाएं? (Why)**: {crop['why']}")
-                st.markdown("---")
+        # Crop Recommendation via GPT
+        st.markdown("## 🌱 फसल सुझाव (AI Based Recommendations)")
+        advice = get_crop_recommendation(pincode, land_size, budget)
+        st.markdown(advice)
 
         # Conversational Q&A
         st.markdown("### ❓ कोई सवाल पूछें फसल पर (Ask about a crop)")
         user_crop_query = st.text_input("जैसे पूछें: मूली क्यों? / dhaniya kyon?")
         if user_crop_query:
-            title, response = get_crop_advice(user_crop_query, crop_data)
-            st.markdown(f"#### {title}")
-            st.info(response)
+            response = ask_crop_question(user_crop_query)
+            st.markdown(response)
