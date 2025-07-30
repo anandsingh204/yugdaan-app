@@ -1,0 +1,117 @@
+{
+  "high_profit": [
+    {
+      "name": "Dragon Fruit",
+      "type": "Fruit",
+      "cost_per_acre": 50000,
+      "expected_profit": "1.5–2.5 lakh",
+      "why": "High market demand, long shelf life, grows well in Bihar's climate"
+    },
+    {
+      "name": "Avocado",
+      "type": "Fruit",
+      "cost_per_acre": 60000,
+      "expected_profit": "2–3 lakh",
+      "why": "Premium fruit with growing urban demand; best for large farmers"
+    },
+    {
+      "name": "Gladiolus",
+      "type": "Flower",
+      "cost_per_acre": 30000,
+      "expected_profit": "80,000–1.2 lakh",
+      "why": "Grows well in winter, used in events and rituals, high-margin crop"
+    }
+  ],
+  "fast_yield": [
+    {
+      "name": "Coriander",
+      "type": "Spice",
+      "cost_per_acre": 10000,
+      "expected_profit": "20,000–40,000",
+      "why": "Grows in 30–40 days, great for short-term returns"
+    },
+    {
+      "name": "Methi (Fenugreek)",
+      "type": "Leafy",
+      "cost_per_acre": 8000,
+      "expected_profit": "15,000–30,000",
+      "why": "Low investment, fast growing winter crop"
+    },
+    {
+      "name": "Green Chilli",
+      "type": "Vegetable",
+      "cost_per_acre": 15000,
+      "expected_profit": "50,000–70,000",
+      "why": "Quick harvest cycle, year-round demand"
+    }
+  ],
+  "low_water": [
+    {
+      "name": "Mustard",
+      "type": "Oilseed",
+      "cost_per_acre": 12000,
+      "expected_profit": "30,000–50,000",
+      "why": "Low water requirement, supported by government MSP"
+    },
+    {
+      "name": "Pearl Millet (Bajra)",
+      "type": "Grain",
+      "cost_per_acre": 10000,
+      "expected_profit": "20,000–35,000",
+      "why": "Excellent for dry soil and rainfed farming"
+    },
+    {
+      "name": "Castor",
+      "type": "Oilseed",
+      "cost_per_acre": 13000,
+      "expected_profit": "35,000–55,000",
+      "why": "Hardy crop, survives in semi-arid regions"
+    }
+  ],
+  "easy_maintenance": [
+    {
+      "name": "Potato",
+      "type": "Vegetable",
+      "cost_per_acre": 25000,
+      "expected_profit": "60,000–90,000",
+      "why": "Bihar staple, good shelf life, mechanized options available"
+    },
+    {
+      "name": "Onion",
+      "type": "Vegetable",
+      "cost_per_acre": 22000,
+      "expected_profit": "55,000–80,000",
+      "why": "Year-round demand, proper storage needed"
+    },
+    {
+      "name": "Arhar (Pigeon Pea)",
+      "type": "Pulse",
+      "cost_per_acre": 14000,
+      "expected_profit": "30,000–45,000",
+      "why": "Low input, nitrogen-fixing crop, fits well in Bihar agrozone"
+    }
+  ],
+  "govt_supported": [
+    {
+      "name": "Wheat",
+      "type": "Cereal",
+      "cost_per_acre": 18000,
+      "expected_profit": "40,000–55,000",
+      "why": "MSP supported, safe choice, high acceptance"
+    },
+    {
+      "name": "Paddy (Dhaan)",
+      "type": "Cereal",
+      "cost_per_acre": 20000,
+      "expected_profit": "45,000–60,000",
+      "why": "Traditional crop, widely grown, government backed MSP"
+    },
+    {
+      "name": "Maize",
+      "type": "Cereal",
+      "cost_per_acre": 17000,
+      "expected_profit": "35,000–50,000",
+      "why": "Less water, stable price, used in multiple industries"
+    }
+  ]
+}
