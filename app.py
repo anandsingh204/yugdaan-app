@@ -1,4 +1,3 @@
-
 import streamlit as st
 import json
 import requests
@@ -42,10 +41,10 @@ def get_weather_alert(pincode):
         data = requests.get(url).json()
         rain = any(day["day"]["daily_chance_of_rain"] > 40 for day in data["forecast"]["forecastday"])
         if not rain:
-            return "⚠️ No rain expected. Soil moisture is low. Irrigate in the morning."
-        return "✅ Rain expected. Irrigation can be postponed."
+            return "⚠️ बारिश नहीं होने वाली है, और मिट्टी में नमी कम है। सुबह सिंचाई करें। (Low soil moisture – irrigate in the morning)"
+        return "✅ बारिश होने की संभावना है, सिंचाई रोकी जा सकती है।"
     except:
-        return "⚠️ Weather data not available."
+        return "⚠️ मौसम जानकारी उपलब्ध नहीं है।"
 
 def get_crop_advice(query, crops):
     query = query.lower()
@@ -55,60 +54,51 @@ def get_crop_advice(query, crops):
         for cat in crops.values():
             for crop in cat:
                 if crop["name"].lower() == closest_match[0]:
-                    return (
-                        f"🌱 {crop['name']} is recommended because: {crop['why']}
-
-"
-                        f"💰 Cost: ₹{crop['cost_per_acre']} per acre
-"
-                        f"📈 Estimated Profit: {crop['expected_profit']} per acre"
-                    )
-    return "❓ Information not available for this crop."
+                    return f"🌱 {crop['name']} is recommended because: {crop['why']}\n\n💰 Cost: ₹{crop['cost_per_acre']} per acre\n📈 Estimated Profit: {crop['expected_profit']} per acre"
+    return "❓ No information available for this crop."
 
 # ----------------- App Config --------------------
 st.set_page_config(page_title="Yugdaan", layout="centered")
 st.title("🌾 Yugdaan – Smart Farming Guide")
 
 # ----------------- Input Section --------------------
-st.markdown("### 📍 Please fill in your details")
+st.markdown("### 📍 कृपया अपना विवरण भरें")
 
-pincode = st.text_input("Enter Pincode")
-land_size = st.selectbox("Land Size", ["<1 acre", "1–2 acre", "2–5 acre", "5+ acre"])
-budget = st.selectbox("Budget", ["<₹10,000", "₹10,000–30,000", "₹30,000–50,000", "₹50,000+"])
+pincode = st.text_input("पिनकोड दर्ज करें (Enter Pincode)")
+land_size = st.selectbox("कितनी ज़मीन में खेती करना है? (Land Size)", ["<1 acre", "1–2 acre", "2–5 acre", "5+ acre"])
+budget = st.selectbox("आपका बजट कितना है? (Budget)", ["<₹10,000", "₹10,000–30,000", "₹30,000–50,000", "₹50,000+"])
 
 if pincode:
     district = get_district_from_pincode(pincode)
     img_url, address, detected_district = get_satellite_image(pincode)
     display_district = district if district else detected_district
     if display_district:
-        st.success(f"📍 District: {display_district}")
+        st.success(f"📍 जिला: {display_district}")
     elif not district:
-        st.warning("⚠️ Pincode not found in system, but location was detected via satellite.")
+        st.warning("⚠️ यह पिनकोड हमारे सिस्टम में नहीं मिला, लेकिन हमने सैटेलाइट से स्थान का पता लगा लिया है।")
     if img_url:
         st.image(img_url, caption=f"🌍 {address}", use_column_width=True)
 
     # ----------------- Weather Section --------------------
-    st.markdown("### 🌤️ Weather Advice")
+    st.markdown("### 🌤️ मौसम सलाह (Weather Advice)")
     weather_tip = get_weather_alert(pincode)
     st.info(weather_tip)
 
     # ----------------- Crop Recommendation Section --------------------
-    st.markdown("## 🌱 Crop Recommendations for You")
+    st.markdown("## 🌱 आपके लिए फसल सुझाव")
     for category, crops in crop_data.items():
         st.markdown(f"### 🔹 {category.replace('_', ' ').title()} Crops")
         for crop in crops:
             st.success(f"**{crop['name']}** ({crop['type']})")
-            st.markdown(f"💰 **Cost (per acre)**: ₹{crop['cost_per_acre']}  
-"
-                        f"📈 **Profit (per acre)**: {crop['expected_profit']}  
-"
-                        f"📝 **Why Grow?**: {crop['why']}")
+            st.markdown(f"💰 **लागत (Cost/acre)**: ₹{crop['cost_per_acre']}  \n"
+                        f"📈 **मुनाफ़ा (Profit/acre)**: {crop['expected_profit']}  \n"
+                        f"📝 **क्यों उगाएं? (Why)**: {crop['why']}")
             st.markdown("---")
 
     # ----------------- Conversational Crop Q&A --------------------
-    st.markdown("### ❓ Ask About a Crop")
-    user_crop_query = st.text_input("e.g., Why radish? / Why coriander?")
+    st.markdown("### ❓ कोई सवाल पूछें फसल पर (Ask about a crop)")
+    user_crop_query = st.text_input("जैसे पूछें: मूली क्यों? / धनिया क्यों?")
     if user_crop_query:
-        cleaned_query = user_crop_query.replace("Why", "").replace("?", "").strip()
+        cleaned_query = user_crop_query.replace("क्यों", "").strip()
         response = get_crop_advice(cleaned_query, crop_data)
         st.info(response)
