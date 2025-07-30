@@ -1,79 +1,77 @@
+
 import streamlit as st
 import json
+import requests
 from datetime import datetime
-from geopy.geocoders import Nominatim
+import pytz
 
-# --- Configurations ---
-API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
-st.set_page_config(page_title="Yugdaan – Personalized Farming Assistant", layout="centered")
-st.title("🌾 Yugdaan – Personalized Farming Assistant for Bihar")
+# ----------------- Load Static Data --------------------
+with open("bihar_pincode_district_map.json", "r", encoding="utf-8") as f:
+    district_map = json.load(f)
 
-# --- Load Pincode-District Mapping ---
-try:
-    with open("bihar_pincode_district_map.json", "r", encoding="utf-8") as f:
-        district_map = json.load(f)
-except FileNotFoundError:
-    district_map = {}
+with open("crop_recommendations.json", "r", encoding="utf-8") as f:
+    crop_data = json.load(f)
 
-# --- Get District from Pincode ---
-pincode = st.text_input("📮 Enter your pincode (पिनकोड दर्ज करें):")
-district = district_map.get(pincode)
+# ----------------- Helper Functions --------------------
+def get_district_from_pincode(pincode):
+    return district_map.get(pincode)
 
-if pincode and not district:
-    st.warning("⚠️ यह पिनकोड हमारे सिस्टम में नहीं मिला। कृपया पुनः जांचें।")
+def get_satellite_image(pincode):
+    geocode_url = f"https://maps.googleapis.com/maps/api/geocode/json?address={pincode}&key={API_KEY}"
+    geocode_response = requests.get(geocode_url).json()
+    if geocode_response["status"] == "OK":
+        location = geocode_response["results"][0]["geometry"]["location"]
+        lat, lng = location["lat"], location["lng"]
+        static_map_url = f"https://maps.googleapis.com/maps/api/staticmap?center={lat},{lng}&zoom=13&size=600x300&maptype=satellite&key={API_KEY}"
+        return static_map_url, geocode_response["results"][0]["formatted_address"]
+    return None, None
 
-# --- Satellite Image Function ---
-def get_satellite_image_url(pincode):
-    geolocator = Nominatim(user_agent="yugdaan-live-app")
-    location = geolocator.geocode({"postalcode": pincode, "country": "India"})
-    if location:
-        lat, lon = location.latitude, location.longitude
-        return (
-            f"https://maps.googleapis.com/maps/api/staticmap?"
-            f"center={lat},{lon}&zoom=14&size=600x400&maptype=satellite"
-            f"&markers=color:red%7Clabel:P%7C{lat},{lon}"
-            f"&key={API_KEY}"
-        )
-    return None
+def get_weather_alert(pincode):
+    try:
+        url = f"https://api.weatherapi.com/v1/forecast.json?key={WEATHER_API_KEY}&q={pincode}&days=2&aqi=no&alerts=no"
+        data = requests.get(url).json()
+        rain = any(day["day"]["daily_chance_of_rain"] > 40 for day in data["forecast"]["forecastday"])
+        if not rain:
+            return "⚠️ बारिश नहीं होने वाली है, और मिट्टी में नमी कम है। सुबह सिंचाई करें। (Low soil moisture – irrigate in the morning)"
+        return "✅ बारिश होने की संभावना है, सिंचाई रोकी जा सकती है।"
+    except:
+        return "⚠️ मौसम जानकारी उपलब्ध नहीं है।"
 
-# --- Show Satellite Image ---
+# ----------------- App Config --------------------
+st.set_page_config(page_title="Yugdaan", layout="centered")
+st.title("🌾 Yugdaan – Smart Farming Guide")
+
+# ----------------- Input Section --------------------
+st.markdown("### 📍 कृपया अपना विवरण भरें")
+
+pincode = st.text_input("पिनकोड दर्ज करें (Enter Pincode)")
+land_size = st.selectbox("कितनी ज़मीन में खेती करना है? (Land Size)", ["<1 acre", "1–2 acre", "2–5 acre", "5+ acre"])
+budget = st.selectbox("आपका बजट कितना है? (Budget)", ["<₹10,000", "₹10,000–30,000", "₹30,000–50,000", "₹50,000+"])
+
 if pincode:
-    sat_url = get_satellite_image_url(pincode)
-    if sat_url:
-        st.image(sat_url, caption="📍 आपके खेत का सैटेलाइट दृश्य")
-
-# --- Farm Questionnaire ---
-if district:
-    st.subheader("👨‍🌾 खेती की जानकारी दर्ज करें")
-    land_size = st.selectbox("🧱 कितनी ज़मीन में खेती करना है?", ["<1 acre", "1–2 acres", "2–5 acres", "5+ acres"])
-    budget = st.selectbox("💰 उपलब्ध बजट कितना है?", ["<₹10,000", "₹10,000–₹25,000", "₹25,000–₹50,000", "₹50,000+"])
-    goal = st.selectbox("🎯 आपकी प्राथमिकता क्या है?", ["High Profit", "Short Duration", "Low Cost", "Less Effort"])
-
-    st.markdown("---")
-    st.subheader("📊 सुझाव और योजनाएं")
-
-    # --- Sample AI Logic ---
-    st.markdown(f"🗺️ जिला: **{district}**")
-    st.markdown(f"📐 ज़मीन: **{land_size}** | 💸 बजट: **{budget}** | 🎯 लक्ष्य: **{goal}**")
-
-    # Example recommendations (mock logic)
-    if goal == "High Profit":
-        st.success("🌱 आप **ड्रैगन फ्रूट**, **अवोकाडो**, या **ग्लैडियोलस फूल** उगा सकते हैं।")
-        st.info("💡 शुरुआती लागत: ₹40,000–₹60,000 प्रति एकड़ | अनुमानित लाभ: ₹1.5–2 लाख प्रति एकड़")
-        st.markdown("📅 **अगस्त-सितंबर** में शुरुआत करें, 12-14 महीने में फसल तैयार होती है।")
-
-    elif goal == "Short Duration":
-        st.success("🌿 आप **मूली**, **पालक**, या **धनिया** जैसे फसलें उगा सकते हैं।")
-        st.info("🗓️ 30–60 दिनों में फसल तैयार | ₹5,000–₹15,000 लागत")
-
-    elif goal == "Low Cost":
-        st.success("🥔 **आलू**, **प्याज**, या **चना** जैसे पारंपरिक फसलें उगाइए।")
-        st.info("💰 लागत: ₹8,000–₹20,000 प्रति एकड़ | लाभ: ₹30,000–₹60,000")
-
+    district = get_district_from_pincode(pincode)
+    if not district:
+        st.warning("⚠️ यह पिनकोड हमारे सिस्टम में नहीं मिला। कृपया पुनः जांचें।")
     else:
-        st.success("🌾 आप **गेहूं**, **सरसों**, या **मक्का** जैसे आसान देखभाल वाली फसलें उगा सकते हैं।")
+        st.success(f"📍 जिला: {district}")
+        img_url, address = get_satellite_image(pincode)
+        if img_url:
+            st.image(img_url, caption=f"🌍 {address}", use_column_width=True)
 
-    st.markdown("📦 ज़रूरी सामग्री, उर्वरक और बीजों की सूची जल्द ही उपलब्ध होगी।")
-    st.markdown("🔁 अगले अपडेट में Google से डीलर डेटा, मंडी भाव और साप्ताहिक कार्य भी जोड़े जाएंगे।")
-else:
-    st.info("📝 खेती की सलाह पाने के लिए ऊपर अपना पिनकोड दर्ज करें।")
+        # ----------------- Weather Section --------------------
+        st.markdown("### 🌤️ मौसम सलाह (Weather Advice)")
+        weather_tip = get_weather_alert(pincode)
+        st.info(weather_tip)
+
+        # ----------------- Crop Recommendation Section --------------------
+        st.markdown("## 🌱 आपके लिए फसल सुझाव")
+        for category, crops in crop_data.items():
+            st.markdown(f"### 🔹 {category.replace('_', ' ').title()} Crops")
+            for crop in crops:
+                st.success(f"**{crop['name']}** ({crop['type']})")
+                st.markdown(f"💰 **लागत (Cost/acre)**: ₹{crop['cost_per_acre']}  
+"
+                            f"📈 **मुनाफ़ा (Profit/acre)**: {crop['expected_profit']}  
+"
+                            f"📝 **क्यों उगाएं? (Why)**: {crop['why']}")
+                st.markdown("---")
