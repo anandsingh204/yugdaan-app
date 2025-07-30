@@ -1,2 +1,6 @@
 streamlit
-geopy
+requests
+openai
+pytz
+difflib
+python-dotenv
