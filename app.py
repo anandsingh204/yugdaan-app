@@ -8,7 +8,7 @@ import os
 # ----------------- Config --------------------
 API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
 WEATHER_API_KEY = "cce8745e8f0664cd77af8b135789fe54"
-OPENAI_API_KEY = "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"  # <-- Replace this line with your valid key
+OPENAI_API_KEY = "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"  # <-- Replace this line with your valid key
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ----------------- Helper Functions --------------------
