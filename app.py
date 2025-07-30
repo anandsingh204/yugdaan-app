@@ -1,3 +1,4 @@
+
 import streamlit as st
 import json
 import requests
@@ -27,8 +28,13 @@ def get_satellite_image(pincode):
         location = geocode_response["results"][0]["geometry"]["location"]
         lat, lng = location["lat"], location["lng"]
         static_map_url = f"https://maps.googleapis.com/maps/api/staticmap?center={lat},{lng}&zoom=13&size=600x300&maptype=satellite&key={API_KEY}"
-        return static_map_url, geocode_response["results"][0]["formatted_address"]
-    return None, None
+        district_name = None
+        for component in geocode_response["results"][0]["address_components"]:
+            if "administrative_area_level_2" in component["types"]:
+                district_name = component["long_name"]
+                break
+        return static_map_url, geocode_response["results"][0]["formatted_address"], district_name
+    return None, None, None
 
 def get_weather_alert(pincode):
     try:
@@ -49,7 +55,10 @@ def get_crop_advice(query, crops):
         for cat in crops.values():
             for crop in cat:
                 if crop["name"].lower() == closest_match[0]:
-                    return f"🌱 {crop['name']} इसलिए सुझाया गया है क्योंकि: {crop['why']}\n\n💰 लागत: ₹{crop['cost_per_acre']} प्रति एकड़\n📈 अनुमानित मुनाफ़ा: {crop['expected_profit']} प्रति एकड़"
+                    return f"🌱 {crop['name']} इसलिए सुझाया गया है क्योंकि: {crop['why']}
+
+💰 लागत: ₹{crop['cost_per_acre']} प्रति एकड़
+📈 अनुमानित मुनाफ़ा: {crop['expected_profit']} प्रति एकड़"
     return "❓ इस फसल पर जानकारी उपलब्ध नहीं है।"
 
 # ----------------- App Config --------------------
@@ -65,34 +74,37 @@ budget = st.selectbox("आपका बजट कितना है? (Budget)",
 
 if pincode:
     district = get_district_from_pincode(pincode)
-    if not district:
-        st.warning("⚠️ यह पिनकोड हमारे सिस्टम में नहीं मिला। कृपया पुनः जांचें।")
-    else:
-        st.success(f"📍 जिला: {district}")
-        img_url, address = get_satellite_image(pincode)
-        if img_url:
-            st.image(img_url, caption=f"🌍 {address}", use_column_width=True)
+    img_url, address, detected_district = get_satellite_image(pincode)
+    display_district = district if district else detected_district
+    if display_district:
+        st.success(f"📍 जिला: {display_district}")
+    elif not district:
+        st.warning("⚠️ यह पिनकोड हमारे सिस्टम में नहीं मिला, लेकिन हमने सैटेलाइट से स्थान का पता लगा लिया है।")
+    if img_url:
+        st.image(img_url, caption=f"🌍 {address}", use_column_width=True)
 
-        # ----------------- Weather Section --------------------
-        st.markdown("### 🌤️ मौसम सलाह (Weather Advice)")
-        weather_tip = get_weather_alert(pincode)
-        st.info(weather_tip)
+    # ----------------- Weather Section --------------------
+    st.markdown("### 🌤️ मौसम सलाह (Weather Advice)")
+    weather_tip = get_weather_alert(pincode)
+    st.info(weather_tip)
 
-        # ----------------- Crop Recommendation Section --------------------
-        st.markdown("## 🌱 आपके लिए फसल सुझाव")
-        for category, crops in crop_data.items():
-            st.markdown(f"### 🔹 {category.replace('_', ' ').title()} Crops")
-            for crop in crops:
-                st.success(f"**{crop['name']}** ({crop['type']})")
-                st.markdown(f"💰 **लागत (Cost/acre)**: ₹{crop['cost_per_acre']}  \n"
-                            f"📈 **मुनाफ़ा (Profit/acre)**: {crop['expected_profit']}  \n"
-                            f"📝 **क्यों उगाएं? (Why)**: {crop['why']}")
-                st.markdown("---")
+    # ----------------- Crop Recommendation Section --------------------
+    st.markdown("## 🌱 आपके लिए फसल सुझाव")
+    for category, crops in crop_data.items():
+        st.markdown(f"### 🔹 {category.replace('_', ' ').title()} Crops")
+        for crop in crops:
+            st.success(f"**{crop['name']}** ({crop['type']})")
+            st.markdown(f"💰 **लागत (Cost/acre)**: ₹{crop['cost_per_acre']}  
+"
+                        f"📈 **मुनाफ़ा (Profit/acre)**: {crop['expected_profit']}  
+"
+                        f"📝 **क्यों उगाएं? (Why)**: {crop['why']}")
+            st.markdown("---")
 
-        # ----------------- Conversational Crop Q&A --------------------
-        st.markdown("### ❓ कोई सवाल पूछें फसल पर (Ask about a crop)")
-        user_crop_query = st.text_input("जैसे पूछें: मूली क्यों? / धनिया क्यों?")
-        if user_crop_query:
-            cleaned_query = user_crop_query.replace("क्यों", "").strip()
-            response = get_crop_advice(cleaned_query, crop_data)
-            st.info(response)
+    # ----------------- Conversational Crop Q&A --------------------
+    st.markdown("### ❓ कोई सवाल पूछें फसल पर (Ask about a crop)")
+    user_crop_query = st.text_input("जैसे पूछें: मूली क्यों? / धनिया क्यों?")
+    if user_crop_query:
+        cleaned_query = user_crop_query.replace("क्यों", "").strip()
+        response = get_crop_advice(cleaned_query, crop_data)
+        st.info(response)
