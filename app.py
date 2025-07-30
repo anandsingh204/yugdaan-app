@@ -1,9 +1,9 @@
-
 import streamlit as st
 import json
 import requests
 from datetime import datetime
 import pytz
+import difflib
 
 # ----------------- Load Static Data --------------------
 with open("bihar_pincode_district_map.json", "r", encoding="utf-8") as f:
@@ -11,6 +11,10 @@ with open("bihar_pincode_district_map.json", "r", encoding="utf-8") as f:
 
 with open("crop_recommendations.json", "r", encoding="utf-8") as f:
     crop_data = json.load(f)
+
+# ----------------- Config --------------------
+API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
+WEATHER_API_KEY = "cce8745e8f0664cd77af8b135789fe54"
 
 # ----------------- Helper Functions --------------------
 def get_district_from_pincode(pincode):
@@ -36,6 +40,17 @@ def get_weather_alert(pincode):
         return "✅ बारिश होने की संभावना है, सिंचाई रोकी जा सकती है।"
     except:
         return "⚠️ मौसम जानकारी उपलब्ध नहीं है।"
+
+def get_crop_advice(query, crops):
+    query = query.lower()
+    all_crop_names = [crop["name"].lower() for cat in crops.values() for crop in cat]
+    closest_match = difflib.get_close_matches(query, all_crop_names, n=1, cutoff=0.6)
+    if closest_match:
+        for cat in crops.values():
+            for crop in cat:
+                if crop["name"].lower() == closest_match[0]:
+                    return f"🌱 {crop['name']} इसलिए सुझाया गया है क्योंकि: {crop['why']}\n\n💰 लागत: ₹{crop['cost_per_acre']} प्रति एकड़\n📈 अनुमानित मुनाफ़ा: {crop['expected_profit']} प्रति एकड़"
+    return "❓ इस फसल पर जानकारी उपलब्ध नहीं है।"
 
 # ----------------- App Config --------------------
 st.set_page_config(page_title="Yugdaan", layout="centered")
@@ -69,9 +84,15 @@ if pincode:
             st.markdown(f"### 🔹 {category.replace('_', ' ').title()} Crops")
             for crop in crops:
                 st.success(f"**{crop['name']}** ({crop['type']})")
-                st.markdown(f"💰 **लागत (Cost/acre)**: ₹{crop['cost_per_acre']}  
-"
-                            f"📈 **मुनाफ़ा (Profit/acre)**: {crop['expected_profit']}  
-"
+                st.markdown(f"💰 **लागत (Cost/acre)**: ₹{crop['cost_per_acre']}  \n"
+                            f"📈 **मुनाफ़ा (Profit/acre)**: {crop['expected_profit']}  \n"
                             f"📝 **क्यों उगाएं? (Why)**: {crop['why']}")
                 st.markdown("---")
+
+        # ----------------- Conversational Crop Q&A --------------------
+        st.markdown("### ❓ कोई सवाल पूछें फसल पर (Ask about a crop)")
+        user_crop_query = st.text_input("जैसे पूछें: मूली क्यों? / धनिया क्यों?")
+        if user_crop_query:
+            cleaned_query = user_crop_query.replace("क्यों", "").strip()
+            response = get_crop_advice(cleaned_query, crop_data)
+            st.info(response)
