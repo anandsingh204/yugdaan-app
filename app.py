@@ -4,6 +4,8 @@ import requests
 from datetime import datetime
 import pytz
 import difflib
+import openai
+import os
 
 # ----------------- Load Static Data --------------------
 with open("bihar_pincode_district_map.json", "r", encoding="utf-8") as f:
@@ -15,6 +17,7 @@ with open("crop_recommendations.json", "r", encoding="utf-8") as f:
 # ----------------- Config --------------------
 API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
 WEATHER_API_KEY = "cce8745e8f0664cd77af8b135789fe54"
+openai.api_key = "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"
 
 # Romanized Hindi to actual Hindi crop names (simplified)
 roman_to_hindi = {
@@ -71,7 +74,22 @@ def get_crop_advice(query, crops):
             for crop in cat:
                 if crop["name"] == closest_match[0]:
                     return f"🌱 **{crop['name']}** इसलिए सुझाया गया है:", f"🔎 कारण: {crop['why']}\n\n💰 लागत: ₹{crop['cost_per_acre']} प्रति एकड़\n📈 अनुमानित मुनाफ़ा: {crop['expected_profit']} प्रति एकड़"
-    return "❓ जानकारी उपलब्ध नहीं है", ""
+
+    # AI fallback
+    prompt = f"एक किसान पूछ रहा है: '{query}' – कृपया सरल हिंदी में बताएं कि वह फसल क्यों उगानी चाहिए।"
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "आप एक कृषि सलाहकार हैं जो बिहार के किसानों की स्थानीय भाषा में सहायता करते हैं।"},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=200
+        )
+        answer = response.choices[0].message.content
+        return f"🌱 {query} के बारे में जानकारी:", answer
+    except:
+        return "❓ जानकारी उपलब्ध नहीं है", ""
 
 # ----------------- App Config --------------------
 st.set_page_config(page_title="Yugdaan", layout="centered")
