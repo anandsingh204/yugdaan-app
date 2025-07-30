@@ -3,11 +3,12 @@ import requests
 from datetime import datetime
 import pytz
 from openai import OpenAI
+import os
 
 # ----------------- Config --------------------
 API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
 WEATHER_API_KEY = "cce8745e8f0664cd77af8b135789fe54"
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "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"  # <-- Replace this line with your valid key
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ----------------- Helper Functions --------------------
@@ -41,7 +42,7 @@ def get_weather_alert(pincode):
         data = requests.get(url).json()
         rain = any(day["day"]["daily_chance_of_rain"] > 40 for day in data["forecast"]["forecastday"])
         if not rain:
-            return "⚠️ बारिश नहीं होने वाली है, और मिट्टी में नमी कम है। सुबह सिंचाई करें। (Low soil moisture – irrigate in the morning)"
+            return "⚠️ बारिश नहीं होने वाली है, और मिट्टी में नमी कम है। सुबह सिंचाई करें।"
         return "✅ बारिश होने की संभावना है, सिंचाई रोकी जा सकती है।"
     except:
         return "⚠️ मौसम जानकारी उपलब्ध नहीं है।"
@@ -49,7 +50,7 @@ def get_weather_alert(pincode):
 def get_crop_recommendation(pincode, land_size, budget):
     prompt = f"""
     I am a farmer from Bihar. My pincode is {pincode}. I want to do farming on land size: {land_size} and my budget is {budget}.
-    Please suggest the 2–3 best crops I should grow now based on season, soil, weather and income trends. 
+    Please suggest the 2–3 best crops I should grow now based on season, soil, weather and income trends.
     Also explain:
     1. Why these crops are suitable
     2. Estimated cost and expected profit per acre
@@ -61,7 +62,7 @@ def get_crop_recommendation(pincode, land_size, budget):
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response.choices[0].message.content
+    return response.choices[0].message.content.strip()
 
 def ask_crop_question(user_query):
     prompt = f"एक किसान ने पूछा है: '{user_query}'. कृपया इस सवाल का जवाब सरल हिंदी में दें ताकि वह समझ सके। फसल की उपयोगिता, लागत, मुनाफा और मौसम की जानकारी जोड़ें।"
@@ -69,18 +70,18 @@ def ask_crop_question(user_query):
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response.choices[0].message.content
+    return response.choices[0].message.content.strip()
 
-# ----------------- App Config --------------------
+# ----------------- App UI --------------------
 st.set_page_config(page_title="Yugdaan", layout="centered")
 st.title("🌾 Yugdaan – Smart Farming Guide")
 
-# ----------------- Input Section --------------------
 st.markdown("### 📍 कृपया अपना विवरण भरें")
 
 pincode = st.text_input("पिनकोड दर्ज करें (Enter Pincode)")
 land_size = st.selectbox("कितनी ज़मीन में खेती करना है? (Land Size)", ["<1 acre", "1–2 acre", "2–5 acre", "5+ acre"])
 budget = st.selectbox("आपका बजट कितना है? (Budget)", ["<₹10,000", "₹10,000–30,000", "₹30,000–50,000", "₹50,000+"])
+
 
 if pincode:
     village, district = get_location_details_from_google(pincode)
@@ -92,17 +93,18 @@ if pincode:
         if img_url:
             st.image(img_url, caption=f"🌍 {address}", use_column_width=True)
 
-        # Weather Section
+        # Weather section
         st.markdown("### 🌤️ मौसम सलाह (Weather Advice)")
         st.info(get_weather_alert(pincode))
 
-        # Crop Recommendation via GPT
+        # GPT-based crop advice
         st.markdown("## 🌱 फसल सुझाव (AI Based Recommendations)")
-        advice = get_crop_recommendation(pincode, land_size, budget)
-        st.markdown(advice)
+        with st.spinner("AI से सुझाव लिए जा रहे हैं..."):
+            advice = get_crop_recommendation(pincode, land_size, budget)
+            st.markdown(advice)
 
-        # Conversational Q&A
-        st.markdown("### ❓ कोई सवाल पूछें फसल पर (Ask about a crop)")
+        # Q&A follow-up
+        st.markdown("### ❓ कोई सवाल पूछें (Ask AI about a crop)")
         user_crop_query = st.text_input("जैसे पूछें: मूली क्यों? / dhaniya kyon?")
         if user_crop_query:
             response = ask_crop_question(user_crop_query)
