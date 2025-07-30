@@ -2,13 +2,13 @@ import streamlit as st
 import requests
 from datetime import datetime
 import pytz
-import openai
+from openai import OpenAI
 
 # ----------------- Config --------------------
 API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
 WEATHER_API_KEY = "cce8745e8f0664cd77af8b135789fe54"
 OPENAI_API_KEY = "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"
-openai.api_key = OPENAI_API_KEY
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ----------------- Helper Functions --------------------
 def get_location_details_from_google(pincode):
@@ -57,19 +57,19 @@ def get_crop_recommendation(pincode, land_size, budget):
     4. Best month to start cultivation
     Answer in simple Hinglish (mix of Hindi-English) that a rural farmer can understand.
     """
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response["choices"][0]["message"]["content"]
+    return response.choices[0].message.content
 
 def ask_crop_question(user_query):
     prompt = f"एक किसान ने पूछा है: '{user_query}'. कृपया इस सवाल का जवाब सरल हिंदी में दें ताकि वह समझ सके। फसल की उपयोगिता, लागत, मुनाफा और मौसम की जानकारी जोड़ें।"
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response["choices"][0]["message"]["content"]
+    return response.choices[0].message.content
 
 # ----------------- App Config --------------------
 st.set_page_config(page_title="Yugdaan", layout="centered")
