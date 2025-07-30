@@ -50,7 +50,7 @@ def get_weather_alert(pincode):
 def get_crop_recommendation(pincode, land_size, budget):
     prompt = f"""
     I am a farmer from Bihar. My pincode is {pincode}. I want to do farming on land size: {land_size} and my budget is {budget}.
-    Please suggest the 2–3 best crops I should grow now based on season, soil, weather and income trends.
+    Please suggest the 2–3 best crops I should grow now based on season, soil, weather and income trends. 
     Also explain:
     1. Why these crops are suitable
     2. Estimated cost and expected profit per acre
@@ -58,11 +58,19 @@ def get_crop_recommendation(pincode, land_size, budget):
     4. Best month to start cultivation
     Answer in simple Hinglish (mix of Hindi-English) that a rural farmer can understand.
     """
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content.strip()
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}]
+        )
+    except Exception as e:
+        st.warning("⚠️ GPT-4 not available, using GPT-3.5 instead.")
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}]
+        )
+    return response.choices[0].message.content
+
 
 def ask_crop_question(user_query):
     prompt = f"एक किसान ने पूछा है: '{user_query}'. कृपया इस सवाल का जवाब सरल हिंदी में दें ताकि वह समझ सके। फसल की उपयोगिता, लागत, मुनाफा और मौसम की जानकारी जोड़ें।"
