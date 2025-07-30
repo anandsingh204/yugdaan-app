@@ -16,6 +16,19 @@ with open("crop_recommendations.json", "r", encoding="utf-8") as f:
 API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
 WEATHER_API_KEY = "cce8745e8f0664cd77af8b135789fe54"
 
+# Romanized Hindi to actual Hindi crop names (simplified)
+roman_to_hindi = {
+    "mooli": "मूली",
+    "dhaniya": "धनिया",
+    "baigan": "बैगन",
+    "aloo": "आलू",
+    "pyaz": "प्याज",
+    "gobhi": "गोभी",
+    "genda": "गेंदा",
+    "tomato": "टमाटर",
+    "tamatar": "टमाटर"
+}
+
 # ----------------- Helper Functions --------------------
 def get_district_from_pincode(pincode):
     return district_map.get(pincode)
@@ -47,15 +60,18 @@ def get_weather_alert(pincode):
         return "⚠️ मौसम जानकारी उपलब्ध नहीं है।"
 
 def get_crop_advice(query, crops):
-    query = query.lower()
-    all_crop_names = [crop["name"].lower() for cat in crops.values() for crop in cat]
+    query = query.lower().replace("?", "").replace("kyon", "").replace("kyun", "").strip()
+    if query in roman_to_hindi:
+        query = roman_to_hindi[query]
+
+    all_crop_names = [crop["name"] for cat in crops.values() for crop in cat]
     closest_match = difflib.get_close_matches(query, all_crop_names, n=1, cutoff=0.6)
     if closest_match:
         for cat in crops.values():
             for crop in cat:
-                if crop["name"].lower() == closest_match[0]:
-                    return f"🌱 {crop['name']} is recommended because: {crop['why']}\n\n💰 Cost: ₹{crop['cost_per_acre']} per acre\n📈 Estimated Profit: {crop['expected_profit']} per acre"
-    return "❓ No information available for this crop."
+                if crop["name"] == closest_match[0]:
+                    return f"🌱 **{crop['name']}** इसलिए सुझाया गया है:", f"🔎 कारण: {crop['why']}\n\n💰 लागत: ₹{crop['cost_per_acre']} प्रति एकड़\n📈 अनुमानित मुनाफ़ा: {crop['expected_profit']} प्रति एकड़"
+    return "❓ जानकारी उपलब्ध नहीं है", ""
 
 # ----------------- App Config --------------------
 st.set_page_config(page_title="Yugdaan", layout="centered")
@@ -97,8 +113,8 @@ if pincode:
 
     # ----------------- Conversational Crop Q&A --------------------
     st.markdown("### ❓ कोई सवाल पूछें फसल पर (Ask about a crop)")
-    user_crop_query = st.text_input("जैसे पूछें: मूली क्यों? / धनिया क्यों?")
+    user_crop_query = st.text_input("जैसे पूछें: मूली क्यों? / dhaniya kyon?")
     if user_crop_query:
-        cleaned_query = user_crop_query.replace("क्यों", "").strip()
-        response = get_crop_advice(cleaned_query, crop_data)
+        title, response = get_crop_advice(user_crop_query, crop_data)
+        st.markdown(f"#### {title}")
         st.info(response)
