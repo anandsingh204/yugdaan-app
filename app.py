@@ -1,15 +1,16 @@
+
 import streamlit as st
 import requests
 from datetime import datetime
 import pytz
-from openai import OpenAI
+import openai
 import os
 
 # ----------------- Config --------------------
 API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
 WEATHER_API_KEY = "cce8745e8f0664cd77af8b135789fe54"
-OPENAI_API_KEY = "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"  # <-- Replace this line with your valid key
-client = OpenAI(api_key=OPENAI_API_KEY)
+OPENAI_API_KEY = "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"
+openai.api_key = OPENAI_API_KEY
 
 # ----------------- Helper Functions --------------------
 def get_location_details_from_google(pincode):
@@ -59,26 +60,31 @@ def get_crop_recommendation(pincode, land_size, budget):
     Answer in simple Hinglish (mix of Hindi-English) that a rural farmer can understand.
     """
     try:
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}]
         )
     except Exception as e:
-        st.warning("⚠️ GPT-4 not available, using GPT-3.5 instead.")
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}]
-        )
-    return response.choices[0].message.content
-
+        st.warning(f"⚠️ GPT-4 failed, switching to GPT-3.5. Error: {e}")
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}]
+            )
+        except Exception as e2:
+            return f"❌ Unable to fetch crop recommendation: {str(e2)}"
+    return response.choices[0].message.content.strip()
 
 def ask_crop_question(user_query):
     prompt = f"एक किसान ने पूछा है: '{user_query}'. कृपया इस सवाल का जवाब सरल हिंदी में दें ताकि वह समझ सके। फसल की उपयोगिता, लागत, मुनाफा और मौसम की जानकारी जोड़ें।"
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content.strip()
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"❌ जवाब देने में समस्या हुई: {str(e)}"
 
 # ----------------- App UI --------------------
 st.set_page_config(page_title="Yugdaan", layout="centered")
@@ -99,7 +105,7 @@ if pincode:
         st.success(f"📍 जिला: {district}, गाँव: {village}")
         img_url, address = get_satellite_image(pincode)
         if img_url:
-            st.image(img_url, caption=f"🌍 {address}", use_column_width=True)
+            st.image(img_url, caption=f"🌍 {address}", use_container_width=True)
 
         # Weather section
         st.markdown("### 🌤️ मौसम सलाह (Weather Advice)")
