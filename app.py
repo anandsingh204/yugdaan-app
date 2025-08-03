@@ -9,7 +9,7 @@ import os
 # ----------------- Config --------------------
 API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
 WEATHER_API_KEY = "cce8745e8f0664cd77af8b135789fe54"
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "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"
 openai.api_key = OPENAI_API_KEY
 
 # ----------------- Helper Functions --------------------
