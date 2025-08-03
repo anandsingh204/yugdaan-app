@@ -2,7 +2,6 @@
 import streamlit as st
 import requests
 import openai
-import pytz
 
 # ----------------- Secure API Key Handling --------------------
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -34,27 +33,19 @@ def get_satellite_image(pincode):
         return static_map_url, geocode_response["results"][0]["formatted_address"]
     return None, None
 
-def get_weather_alert(pincode):
-    try:
-        url = f"https://api.weatherapi.com/v1/forecast.json?key={WEATHER_API_KEY}&q={pincode}&days=2&aqi=no&alerts=no"
-        data = requests.get(url).json()
-        rain = any(day["day"]["daily_chance_of_rain"] > 40 for day in data["forecast"]["forecastday"])
-        if not rain:
-            return "⚠️ बारिश नहीं होने वाली है, और मिट्टी में नमी कम है। सुबह सिंचाई करें।"
-        return "✅ बारिश होने की संभावना है, सिंचाई रोकी जा सकती है।"
-    except:
-        return "⚠️ मौसम जानकारी उपलब्ध नहीं है।"
-
-def get_crop_recommendation(pincode, land_size, budget):
+def validate_farmer_crop(pincode, district, crop):
     prompt = f"""
-    I am a farmer from Bihar. My pincode is {pincode}. I want to do farming on land size: {land_size} and my budget is {budget}.
-    Please suggest the 2–3 best crops I should grow now based on season, soil, weather and income trends. 
-    Also explain:
-    1. Why these crops are suitable
-    2. Estimated cost and expected profit per acre
-    3. What I will need for best yield (like fertilizers, pesticides etc.)
-    4. Best month to start cultivation
-    Answer in simple Hinglish (mix of Hindi-English) that a rural farmer can understand.
+    A farmer in {district} (pincode {pincode}) wants to grow {crop}. 
+    Based on typical soil, season, and weather in this area, analyze if this is a good decision.
+    If it's a good crop choice, say so clearly and provide:
+    - Reasons it's suitable
+    - Expected yield/profit
+    - Timeline & what inputs (seeds, fertilizers) are needed
+    - Suggest links for buying inputs (BigHaat, Amazon, etc.)
+    - Recommend crop insurance: both government (like PMFBY) and private (IFFCO, HDFC Ergo)
+
+    If it's NOT a good choice, explain why and suggest 2-3 better crops instead based on soil/weather/season.
+    Respond in Hinglish with clear formatting and practical advice.
     """
     try:
         response = openai.ChatCompletion.create(
@@ -63,24 +54,13 @@ def get_crop_recommendation(pincode, land_size, budget):
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        return f"❌ Unable to fetch recommendation: {str(e)}"
-
-def ask_crop_question(user_query):
-    prompt = f"एक किसान ने पूछा है: '{user_query}'. कृपया इस सवाल का जवाब सरल हिंदी में दें ताकि वह समझ सके। फसल की उपयोगिता, लागत, मुनाफा और मौसम की जानकारी जोड़ें।"
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"❌ जवाब देने में समस्या हुई: {str(e)}"
+        return f"❌ GPT issue: {str(e)}"
 
 # ----------------- App UI --------------------
-st.set_page_config(page_title="Yugdaan", layout="centered")
-st.title("🌾 Yugdaan – Smart Farming Guide")
+st.set_page_config(page_title="Yugdaan – FarmGPT", layout="centered")
+st.title("🌾 Yugdaan – FarmGPT: Smart Crop Validator")
 
-st.markdown("### 📍 कृपया अपना विवरण भरें")
+st.markdown("### 📍 Step 1: कृपया अपना पिनकोड और विवरण भरें")
 
 pincode = st.text_input("पिनकोड दर्ज करें (Enter Pincode)")
 land_size = st.selectbox("कितनी ज़मीन में खेती करना है? (Land Size)", ["<1 acre", "1–2 acre", "2–5 acre", "5+ acre"])
@@ -97,19 +77,18 @@ if pincode:
         if img_url:
             st.image(img_url, caption=f"🌍 {address}", use_container_width=True)
 
-        # Weather section
-        st.markdown("### 🌤️ मौसम सलाह (Weather Advice)")
-        st.info(get_weather_alert(pincode))
+        # Weather section (placeholder)
+        st.markdown("### ☁️ मौसम की जानकारी (coming soon...)")
 
-        # GPT-based crop advice
-        st.markdown("## 🌱 फसल सुझाव (AI Based Recommendations)")
-        with st.spinner("AI से सुझाव लिए जा रहे हैं..."):
-            advice = get_crop_recommendation(pincode, land_size, budget)
-            st.markdown(advice)
+        # Farmer crop input
+        st.markdown("### 🌱 Step 2: किसान द्वारा चुनी गई फसल का चयन करें")
+        farmer_crop = st.selectbox("आप कौन सी फसल उगाना चाहते हैं?", [
+            "गेहूं (Wheat)", "धान (Paddy)", "मूली (Radish)", "टमाटर (Tomato)",
+            "धनिया (Coriander)", "मक्का (Maize)", "गन्ना (Sugarcane)", 
+            "बैंगन (Brinjal)", "सरसों (Mustard)", "चना (Chickpea)"
+        ])
 
-        # Q&A follow-up
-        st.markdown("### ❓ कोई सवाल पूछें (Ask AI about a crop)")
-        user_crop_query = st.text_input("जैसे पूछें: मूली क्यों? / dhaniya kyon?")
-        if user_crop_query:
-            response = ask_crop_question(user_crop_query)
-            st.markdown(response)
+        if st.button("✅ सुझाव प्राप्त करें (Validate Crop Choice)"):
+            with st.spinner("AI से सुझाव लिए जा रहे हैं..."):
+                response = validate_farmer_crop(pincode, district, farmer_crop)
+                st.markdown(response)
