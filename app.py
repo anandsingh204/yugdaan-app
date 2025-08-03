@@ -1,16 +1,13 @@
 
 import streamlit as st
 import requests
-from datetime import datetime
-import pytz
 import openai
-import os
+import pytz
 
-# ----------------- Config --------------------
-API_KEY = "AIzaSyCsfJgoE10pmFhxAKLN4EXRX4ESmbTpB7A"
-WEATHER_API_KEY = "cce8745e8f0664cd77af8b135789fe54"
-OPENAI_API_KEY = "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"
-openai.api_key = OPENAI_API_KEY
+# ----------------- Secure API Key Handling --------------------
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+API_KEY = st.secrets["GOOGLE_API_KEY"]
+WEATHER_API_KEY = st.secrets["WEATHER_API_KEY"]
 
 # ----------------- Helper Functions --------------------
 def get_location_details_from_google(pincode):
@@ -123,4 +120,3 @@ if pincode:
         if user_crop_query:
             response = ask_crop_question(user_crop_query)
             st.markdown(response)
-#
