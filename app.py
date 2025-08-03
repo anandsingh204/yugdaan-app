@@ -123,3 +123,4 @@ if pincode:
         if user_crop_query:
             response = ask_crop_question(user_crop_query)
             st.markdown(response)
+#
