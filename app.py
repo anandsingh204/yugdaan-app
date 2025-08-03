@@ -58,25 +58,18 @@ def get_crop_recommendation(pincode, land_size, budget):
     """
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}]
         )
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        st.warning(f"⚠️ GPT-4 failed, switching to GPT-3.5. Error: {e}")
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": prompt}]
-            )
-        except Exception as e2:
-            return f"❌ Unable to fetch crop recommendation: {str(e2)}"
-    return response.choices[0].message.content.strip()
+        return f"❌ Unable to fetch recommendation: {str(e)}"
 
 def ask_crop_question(user_query):
     prompt = f"एक किसान ने पूछा है: '{user_query}'. कृपया इस सवाल का जवाब सरल हिंदी में दें ताकि वह समझ सके। फसल की उपयोगिता, लागत, मुनाफा और मौसम की जानकारी जोड़ें।"
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content.strip()
