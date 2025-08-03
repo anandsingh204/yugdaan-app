@@ -56,6 +56,16 @@ def validate_farmer_crop(pincode, district, crop):
     except Exception as e:
         return f"❌ GPT issue: {str(e)}"
 
+def chat_with_gpt(prompt):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"❌ GPT issue: {str(e)}"
+
 # ----------------- App UI --------------------
 st.set_page_config(page_title="Yugdaan – FarmGPT", layout="centered")
 st.title("🌾 Yugdaan – FarmGPT: Smart Crop Validator")
@@ -66,6 +76,8 @@ pincode = st.text_input("पिनकोड दर्ज करें (Enter Pin
 land_size = st.selectbox("कितनी ज़मीन में खेती करना है? (Land Size)", ["<1 acre", "1–2 acre", "2–5 acre", "5+ acre"])
 budget = st.selectbox("आपका बजट कितना है? (Budget)", ["<₹10,000", "₹10,000–30,000", "₹30,000–50,000", "₹50,000+"])
 
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 if pincode:
     village, district = get_location_details_from_google(pincode)
@@ -77,10 +89,10 @@ if pincode:
         if img_url:
             st.image(img_url, caption=f"🌍 {address}", use_container_width=True)
 
-        # Weather section (placeholder)
+        # Weather section placeholder
         st.markdown("### ☁️ मौसम की जानकारी (coming soon...)")
 
-        # Farmer crop input
+        # Crop choice
         st.markdown("### 🌱 Step 2: किसान द्वारा चुनी गई फसल का चयन करें")
         farmer_crop = st.selectbox("आप कौन सी फसल उगाना चाहते हैं?", [
             "गेहूं (Wheat)", "धान (Paddy)", "मूली (Radish)", "टमाटर (Tomato)",
@@ -90,5 +102,23 @@ if pincode:
 
         if st.button("✅ सुझाव प्राप्त करें (Validate Crop Choice)"):
             with st.spinner("AI से सुझाव लिए जा रहे हैं..."):
-                response = validate_farmer_crop(pincode, district, farmer_crop)
-                st.markdown(response)
+                crop_advice = validate_farmer_crop(pincode, district, farmer_crop)
+                st.session_state.chat_history.append(("🧠 FarmGPT", crop_advice))
+                st.markdown(crop_advice)
+
+        # Chat follow-up
+        st.markdown("### 🤝 और कुछ पूछना है? (Ask more...)")
+        followup = st.text_input("जैसे पूछें: 'बीज कहां मिलेगा?' या 'कितनी बार सिंचाई?'")
+        if followup:
+            with st.spinner("AI से जवाब आ रहा है..."):
+                chat_prompt = f"एक किसान पूछ रहा है: '{followup}'. सरल भाषा में बताइए, Hinglish में, भरोसेमंद अंदाज़ में।"
+                chat_reply = chat_with_gpt(chat_prompt)
+                st.session_state.chat_history.append(("👨‍🌾 किसान", followup))
+                st.session_state.chat_history.append(("🧠 FarmGPT", chat_reply))
+
+        # Display chat history
+        for role, msg in st.session_state.chat_history:
+            if role == "👨‍🌾 किसान":
+                st.markdown(f"**{role}:** {msg}")
+            else:
+                st.markdown(f"_{role}:_ {msg}")
