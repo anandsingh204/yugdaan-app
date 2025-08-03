@@ -1,124 +1,61 @@
 
 import streamlit as st
-import requests
-import openai
 
-# ----------------- Secure API Key Handling --------------------
-openai.api_key = st.secrets["OPENAI_API_KEY"]
-API_KEY = st.secrets["GOOGLE_API_KEY"]
-WEATHER_API_KEY = st.secrets["WEATHER_API_KEY"]
+st.set_page_config(page_title="Yugdaan – Smart Farming", layout="centered")
 
-# ----------------- Helper Functions --------------------
-def get_location_details_from_google(pincode):
-    geocode_url = f"https://maps.googleapis.com/maps/api/geocode/json?address={pincode}&key={API_KEY}"
-    response = requests.get(geocode_url).json()
-    if response["status"] == "OK":
-        components = response["results"][0]["address_components"]
-        district, village = None, None
-        for comp in components:
-            if "administrative_area_level_2" in comp["types"]:
-                district = comp["long_name"]
-            if "sublocality_level_1" in comp["types"] or "locality" in comp["types"]:
-                village = comp["long_name"]
-        return village or "Unknown", district or "Unknown"
-    return "❌ Not Found", "❌ Not Found"
+# ----------------- Branding -------------------
+st.markdown("## 🌾 Welcome to Yugdaan – Your Farming Guide")
+st.markdown("##### 🚀 Let's begin your smart farming journey")
 
-def get_satellite_image(pincode):
-    geocode_url = f"https://maps.googleapis.com/maps/api/geocode/json?address={pincode}&key={API_KEY}"
-    geocode_response = requests.get(geocode_url).json()
-    if geocode_response["status"] == "OK":
-        location = geocode_response["results"][0]["geometry"]["location"]
-        lat, lng = location["lat"], location["lng"]
-        static_map_url = f"https://maps.googleapis.com/maps/api/staticmap?center={lat},{lng}&zoom=13&size=600x300&maptype=satellite&key={API_KEY}"
-        return static_map_url, geocode_response["results"][0]["formatted_address"]
-    return None, None
+# ----------------- Step 1: Login or Guest -------------------
+st.markdown("### 🔐 Step 1: Login or Continue")
+login_method = st.radio("How would you like to continue?", ["Continue as Guest", "Login with Google (Coming Soon)"])
 
-def validate_farmer_crop(pincode, district, crop):
-    prompt = f"""
-    A farmer in {district} (pincode {pincode}) wants to grow {crop}. 
-    Based on typical soil, season, and weather in this area, analyze if this is a good decision.
-    If it's a good crop choice, say so clearly and provide:
-    - Reasons it's suitable
-    - Expected yield/profit
-    - Timeline & what inputs (seeds, fertilizers) are needed
-    - Suggest links for buying inputs (BigHaat, Amazon, etc.)
-    - Recommend crop insurance: both government (like PMFBY) and private (IFFCO, HDFC Ergo)
-
-    If it's NOT a good choice, explain why and suggest 2-3 better crops instead based on soil/weather/season.
-    Respond in Hinglish with clear formatting and practical advice.
-    """
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"❌ GPT issue: {str(e)}"
-
-def chat_with_gpt(prompt):
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"❌ GPT issue: {str(e)}"
-
-# ----------------- App UI --------------------
-st.set_page_config(page_title="Yugdaan – FarmGPT", layout="centered")
-st.title("🌾 Yugdaan – FarmGPT: Smart Crop Validator")
-
-st.markdown("### 📍 Step 1: कृपया अपना पिनकोड और विवरण भरें")
-
-pincode = st.text_input("पिनकोड दर्ज करें (Enter Pincode)")
-land_size = st.selectbox("कितनी ज़मीन में खेती करना है? (Land Size)", ["<1 acre", "1–2 acre", "2–5 acre", "5+ acre"])
-budget = st.selectbox("आपका बजट कितना है? (Budget)", ["<₹10,000", "₹10,000–30,000", "₹30,000–50,000", "₹50,000+"])
-
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+# ----------------- Step 2: Location Access -------------------
+st.markdown("### 📍 Step 2: Location")
+location_mode = st.radio("Choose how to provide your location:", ["📍 Use Current Location (Coming Soon)", "📌 Enter Pincode Manually"])
+pincode = ""
+if location_mode == "📌 Enter Pincode Manually":
+    pincode = st.text_input("Enter your Pincode")
 
 if pincode:
-    village, district = get_location_details_from_google(pincode)
-    if district == "❌ Not Found":
-        st.warning("⚠️ यह पिनकोड हमारे सिस्टम में नहीं मिला। कृपया पुनः जांचें।")
-    else:
-        st.success(f"📍 जिला: {district}, गाँव: {village}")
-        img_url, address = get_satellite_image(pincode)
-        if img_url:
-            st.image(img_url, caption=f"🌍 {address}", use_container_width=True)
+    st.success(f"📍 Location set to Pincode: {pincode}")
 
-        # Weather section placeholder
-        st.markdown("### ☁️ मौसम की जानकारी (coming soon...)")
+# ----------------- Step 3: Farming Category -------------------
+st.markdown("### 🗂️ Step 3: Choose Your Farming Category")
 
-        # Crop choice
-        st.markdown("### 🌱 Step 2: किसान द्वारा चुनी गई फसल का चयन करें")
-        farmer_crop = st.selectbox("आप कौन सी फसल उगाना चाहते हैं?", [
-            "गेहूं (Wheat)", "धान (Paddy)", "मूली (Radish)", "टमाटर (Tomato)",
-            "धनिया (Coriander)", "मक्का (Maize)", "गन्ना (Sugarcane)", 
-            "बैंगन (Brinjal)", "सरसों (Mustard)", "चना (Chickpea)"
-        ])
+category = st.selectbox("What type of farming help do you need?", [
+    "🌾 Crop Cultivation",
+    "🥬 Kitchen/Urban Farming",
+    "🐄 Dairy & Livestock",
+    "🌱 Organic/Natural Farming",
+    "☀️ Solar-powered Farming",
+    "🚜 Agri-Machinery Leasing",
+    "🧪 Soil & Weather Advisory",
+    "📦 Farm-to-Market Help",
+    "🛡️ Crop Insurance Help",
+    "💸 Subsidies & Government Schemes"
+])
 
-        if st.button("✅ सुझाव प्राप्त करें (Validate Crop Choice)"):
-            with st.spinner("AI से सुझाव लिए जा रहे हैं..."):
-                crop_advice = validate_farmer_crop(pincode, district, farmer_crop)
-                st.session_state.chat_history.append(("🧠 FarmGPT", crop_advice))
-                st.markdown(crop_advice)
+# ----------------- Category Follow-up -------------------
+if category == "🌾 Crop Cultivation":
+    st.markdown("### 🌱 Let's help you plan your crop")
+    selected_crop = st.selectbox("Which crop are you thinking to grow?", [
+        "गेहूं (Wheat)", "धान (Paddy)", "मूली (Radish)", "टमाटर (Tomato)",
+        "धनिया (Coriander)", "मक्का (Maize)", "गन्ना (Sugarcane)", 
+        "बैंगन (Brinjal)", "सरसों (Mustard)", "चना (Chickpea)"
+    ])
+    if st.button("📊 Validate this crop choice with AI"):
+        st.markdown("✅ *This is where FarmGPT will validate your choice and suggest inputs, profit, and insurance options...*")
 
-        # Chat follow-up
-        st.markdown("### 🤝 और कुछ पूछना है? (Ask more...)")
-        followup = st.text_input("जैसे पूछें: 'बीज कहां मिलेगा?' या 'कितनी बार सिंचाई?'")
-        if followup:
-            with st.spinner("AI से जवाब आ रहा है..."):
-                chat_prompt = f"एक किसान पूछ रहा है: '{followup}'. सरल भाषा में बताइए, Hinglish में, भरोसेमंद अंदाज़ में।"
-                chat_reply = chat_with_gpt(chat_prompt)
-                st.session_state.chat_history.append(("👨‍🌾 किसान", followup))
-                st.session_state.chat_history.append(("🧠 FarmGPT", chat_reply))
+elif category == "🐄 Dairy & Livestock":
+    st.info("🚧 Dairy & Livestock guidance is coming soon...")
 
-        # Display chat history
-        for role, msg in st.session_state.chat_history:
-            if role == "👨‍🌾 किसान":
-                st.markdown(f"**{role}:** {msg}")
-            else:
-                st.markdown(f"_{role}:_ {msg}")
+elif category == "🧪 Soil & Weather Advisory":
+    st.info("🚧 We will soon provide soil & weather trends for your location...")
+
+else:
+    st.info(f"🚧 Guidance for '{category}' is under development. Stay tuned!")
+
+st.markdown("---")
+st.markdown("🔐 Note: We respect your privacy. No personal data is stored.")
